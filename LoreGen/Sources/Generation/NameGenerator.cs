@@ -3,26 +3,39 @@ using System.Collections.Generic;
 using System.Linq;
 using LoreGen.Core;
 using LoreGen.Data;
+using LoreGen.Rules;
 using LoreGen.Utilities;
 
 namespace LoreGen.Generation;
 
 /// <summary>
-/// 名前生成器: 音節組み合わせによる固有名詞生成 (Phase 1)
+/// 名前生成器: 音節組み合わせ + 派生ルール対応
 /// </summary>
 public class NameGenerator
 {
     private readonly SyllableDatabase _database;
+    private readonly DerivationEngine? _derivationEngine;
 
-    public NameGenerator(SyllableDatabase database)
+    public NameGenerator(SyllableDatabase database) : this(database, null)
+    {
+    }
+
+    public NameGenerator(SyllableDatabase database, DerivationEngine? derivationEngine)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
+        _derivationEngine = derivationEngine;
     }
 
     /// <summary>指定されたコンテキストで名前を生成</summary>
     public GenerationResult Generate(GenerationContext context)
     {
-        var random = new RandomProvider(context.Seed ?? Environment.TickCount);
+        // BaseNameが指定されている場合は派生生成
+        if (!string.IsNullOrEmpty(context.BaseName) && _derivationEngine != null)
+        {
+            return _derivationEngine.Derive(context.BaseName, context);
+        }
+
+        var random = new RandomProvider(context.Seed ?? Guid.NewGuid().GetHashCode());
         var constraints = context.Constraints ?? new StructuralConstraints();
 
         // 音節数の決定
@@ -60,13 +73,12 @@ public class NameGenerator
 
         for (int i = 0; i < count; i++)
         {
-            Syllable? selected;
+            List<Syllable> candidates;
 
             if (i == 0)
             {
                 // 語頭: 語頭配置可能な音節から選択
-                var candidates = _database.GetInitialSyllables().ToList();
-                selected = random.ChooseWeighted(candidates, s => s.Weight);
+                candidates = _database.GetInitialSyllables().ToList();
             }
             else if (i == count - 1)
             {
@@ -75,21 +87,39 @@ public class NameGenerator
                 var followingCandidates = _database.GetFollowingSyllables(previous).ToList();
                 var finalCandidates = followingCandidates.Where(s => s.Constraints.CanBeFinal).ToList();
 
-                selected = finalCandidates.Count > 0
-                    ? random.ChooseWeighted(finalCandidates, s => s.Weight)
-                    : random.ChooseWeighted(followingCandidates, s => s.Weight);
+                candidates = finalCandidates.Count > 0 ? finalCandidates : followingCandidates;
             }
             else
             {
                 // 中間: 先行音節との連続可能性を考慮
                 var previous = result[i - 1];
-                var candidates = _database.GetFollowingSyllables(previous).ToList();
-                selected = random.ChooseWeighted(candidates, s => s.Weight);
+                candidates = _database.GetFollowingSyllables(previous).ToList();
             }
 
-            if (selected == null)
+            // Phase 2.5: 発音品質向上のための制約
+            if (i > 0)
+            {
+                var previous = result[i - 1];
+
+                // 同一音節の連続を防止
+                candidates = candidates.Where(s => s.Id != previous.Id).ToList();
+
+                // 母音連続を回避（前の音節が母音で終わり、次が母音で始まる場合を除外）
+                if (previous.Structure.EndsWithVowel())
+                {
+                    var consonantStartCandidates = candidates.Where(s => !s.Structure.StartsWithVowel()).ToList();
+                    // 子音始まりの候補が存在する場合のみ制約を適用
+                    if (consonantStartCandidates.Count > 0)
+                    {
+                        candidates = consonantStartCandidates;
+                    }
+                }
+            }
+
+            if (candidates.Count == 0)
                 throw new InvalidOperationException($"No suitable syllable found at position {i}");
 
+            var selected = random.ChooseWeighted(candidates, s => s.Weight);
             result.Add(selected);
         }
 

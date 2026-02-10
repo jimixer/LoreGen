@@ -25,7 +25,6 @@ public class NameGenerationDemo
             var context = new GenerationContext
             {
                 Type = NameType.Place,
-                Seed = i,
                 Constraints = new StructuralConstraints
                 {
                     MinSyllables = 2,
@@ -62,7 +61,6 @@ public class NameGenerationDemo
             {
                 var context = new GenerationContext
                 {
-                    Seed = syllables * 100 + i,
                     Constraints = new StructuralConstraints
                     {
                         MinSyllables = syllables,
@@ -92,7 +90,7 @@ public class NameGenerationDemo
 
         for (int i = 0; i < 50; i++)
         {
-            var result = generator.Generate(new GenerationContext { Seed = i });
+            var result = generator.Generate(new GenerationContext());
             hardnessValues.Add(result.ActualImpression.Hardness);
             sharpnessValues.Add(result.ActualImpression.Sharpness);
             names.Add(result.Name);
