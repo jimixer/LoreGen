@@ -128,4 +128,86 @@ public class NameGeneratorTests
         // 10回生成して、少なくとも3種類以上の名前が生成されることを期待
         Assert.That(names.Count, Is.GreaterThanOrEqualTo(3));
     }
+
+    // Phase 2.5: 発音品質改善テスト
+
+    [Test]
+    public void Generate_AvoidsDuplicateSyllables()
+    {
+        // 複数回生成して同一音節の連続がないことを確認
+        for (int seed = 0; seed < 20; seed++)
+        {
+            var result = _generator.Generate(new GenerationContext
+            {
+                Seed = seed,
+                Constraints = new StructuralConstraints { MinSyllables = 3, MaxSyllables = 3 }
+            });
+
+            var syllables = result.Metadata.UsedSyllables;
+            for (int i = 1; i < syllables.Length; i++)
+            {
+                Assert.That(syllables[i], Is.Not.EqualTo(syllables[i - 1]),
+                    $"同一音節が連続: {syllables[i - 1]} -> {syllables[i]} in {result.Name}");
+            }
+        }
+    }
+
+    [Test]
+    public void Generate_MinimizesVowelClusters()
+    {
+        // 複数回生成して母音連続が最小化されていることを確認
+        int vowelClusterCount = 0;
+        const int iterations = 50;
+
+        for (int seed = 0; seed < iterations; seed++)
+        {
+            var result = _generator.Generate(new GenerationContext
+            {
+                Seed = seed,
+                Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 4 }
+            });
+
+            // 母音連続を検出（単純化: 連続する2文字が母音かチェック）
+            var vowels = "aeiouAEIOU";
+            for (int i = 0; i < result.Name.Length - 1; i++)
+            {
+                if (vowels.Contains(result.Name[i]) && vowels.Contains(result.Name[i + 1]))
+                {
+                    vowelClusterCount++;
+                    break; // この名前では1回だけカウント
+                }
+            }
+        }
+
+        // 50回中、母音連続は10回以下であることを期待（80%以上で回避）
+        Assert.That(vowelClusterCount, Is.LessThanOrEqualTo(10),
+            $"母音連続が頻発: {vowelClusterCount}/{iterations}回");
+    }
+
+    [Test]
+    public void Generate_ProducesNaturalSoundingNames()
+    {
+        // 総合的な発音品質確認（統合テスト）
+        var problematicPatterns = new[]
+        {
+            @"(\w)\1{2,}",  // 3文字以上の同じ文字連続
+            @"[bcdfghjklmnpqrstvwxz]{5,}"  // 5文字以上の子音連続（4文字までは許容）
+        };
+
+        for (int seed = 0; seed < 30; seed++)
+        {
+            var result = _generator.Generate(new GenerationContext
+            {
+                Seed = seed,
+                Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 3 }
+            });
+
+            foreach (var pattern in problematicPatterns)
+            {
+                Assert.That(System.Text.RegularExpressions.Regex.IsMatch(result.Name.ToLower(), pattern),
+                    Is.False,
+                    $"不自然なパターン検出: {result.Name} matches {pattern}");
+            }
+        }
+    }
 }

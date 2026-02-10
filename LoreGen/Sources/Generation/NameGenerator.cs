@@ -73,13 +73,12 @@ public class NameGenerator
 
         for (int i = 0; i < count; i++)
         {
-            Syllable? selected;
+            List<Syllable> candidates;
 
             if (i == 0)
             {
                 // 語頭: 語頭配置可能な音節から選択
-                var candidates = _database.GetInitialSyllables().ToList();
-                selected = random.ChooseWeighted(candidates, s => s.Weight);
+                candidates = _database.GetInitialSyllables().ToList();
             }
             else if (i == count - 1)
             {
@@ -88,21 +87,39 @@ public class NameGenerator
                 var followingCandidates = _database.GetFollowingSyllables(previous).ToList();
                 var finalCandidates = followingCandidates.Where(s => s.Constraints.CanBeFinal).ToList();
 
-                selected = finalCandidates.Count > 0
-                    ? random.ChooseWeighted(finalCandidates, s => s.Weight)
-                    : random.ChooseWeighted(followingCandidates, s => s.Weight);
+                candidates = finalCandidates.Count > 0 ? finalCandidates : followingCandidates;
             }
             else
             {
                 // 中間: 先行音節との連続可能性を考慮
                 var previous = result[i - 1];
-                var candidates = _database.GetFollowingSyllables(previous).ToList();
-                selected = random.ChooseWeighted(candidates, s => s.Weight);
+                candidates = _database.GetFollowingSyllables(previous).ToList();
             }
 
-            if (selected == null)
+            // Phase 2.5: 発音品質向上のための制約
+            if (i > 0)
+            {
+                var previous = result[i - 1];
+
+                // 同一音節の連続を防止
+                candidates = candidates.Where(s => s.Id != previous.Id).ToList();
+
+                // 母音連続を回避（前の音節が母音で終わり、次が母音で始まる場合を除外）
+                if (previous.Structure.EndsWithVowel())
+                {
+                    var consonantStartCandidates = candidates.Where(s => !s.Structure.StartsWithVowel()).ToList();
+                    // 子音始まりの候補が存在する場合のみ制約を適用
+                    if (consonantStartCandidates.Count > 0)
+                    {
+                        candidates = consonantStartCandidates;
+                    }
+                }
+            }
+
+            if (candidates.Count == 0)
                 throw new InvalidOperationException($"No suitable syllable found at position {i}");
 
+            var selected = random.ChooseWeighted(candidates, s => s.Weight);
             result.Add(selected);
         }
 

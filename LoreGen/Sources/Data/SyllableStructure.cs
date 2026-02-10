@@ -26,4 +26,10 @@ public class SyllableStructure
 
     /// <summary>構造を文字列として取得 (onset + nucleus + coda)</summary>
     public string GetPattern() => Onset + Nucleus + Coda;
+
+    /// <summary>母音で終わるか（尾子音がない）</summary>
+    public bool EndsWithVowel() => string.IsNullOrEmpty(Coda) && !string.IsNullOrEmpty(Nucleus);
+
+    /// <summary>母音で始まるか（頭子音がない）</summary>
+    public bool StartsWithVowel() => string.IsNullOrEmpty(Onset) && !string.IsNullOrEmpty(Nucleus);
 }
