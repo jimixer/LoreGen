@@ -3,25 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using LoreGen.Core;
 using LoreGen.Data;
+using LoreGen.Rules;
 using LoreGen.Utilities;
 
 namespace LoreGen.Generation;
 
 /// <summary>
-/// 名前生成器: 音節組み合わせによる固有名詞生成 (Phase 1)
+/// 名前生成器: 音節組み合わせ + 派生ルール対応
 /// </summary>
 public class NameGenerator
 {
     private readonly SyllableDatabase _database;
+    private readonly DerivationEngine? _derivationEngine;
 
-    public NameGenerator(SyllableDatabase database)
+    public NameGenerator(SyllableDatabase database) : this(database, null)
+    {
+    }
+
+    public NameGenerator(SyllableDatabase database, DerivationEngine? derivationEngine)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
+        _derivationEngine = derivationEngine;
     }
 
     /// <summary>指定されたコンテキストで名前を生成</summary>
     public GenerationResult Generate(GenerationContext context)
     {
+        // BaseNameが指定されている場合は派生生成
+        if (!string.IsNullOrEmpty(context.BaseName) && _derivationEngine != null)
+        {
+            return _derivationEngine.Derive(context.BaseName, context);
+        }
+
         var random = new RandomProvider(context.Seed ?? Environment.TickCount);
         var constraints = context.Constraints ?? new StructuralConstraints();
 
