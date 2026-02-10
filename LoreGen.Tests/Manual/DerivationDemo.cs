@@ -24,14 +24,13 @@ public class DerivationDemo
 
         Console.WriteLine("=== 地名から派生形を生成 ===\n");
 
-        // まず基本の地名を生成
+        // まず基本の地名を生成（ランダム）
         var baseNames = new List<string>();
         for (int i = 0; i < 8; i++)
         {
             var result = generator.Generate(new GenerationContext
             {
                 Type = NameType.Place,
-                Seed = i * 10,
                 Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 3 }
             });
             baseNames.Add(result.Name);
@@ -121,11 +120,10 @@ public class DerivationDemo
 
         for (int i = 0; i < 10; i++)
         {
-            // 基本地名を生成
+            // 基本地名を生成（ランダム）
             var baseResult = baseGenerator.Generate(new GenerationContext
             {
                 Type = NameType.Place,
-                Seed = i * 10,
                 Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 3 }
             });
 
@@ -222,12 +220,11 @@ public class DerivationDemo
 
         for (int i = 0; i < 5; i++)
         {
-            // 1. 王国名を生成
+            // 1. 王国名を生成（ランダム）
             var baseGenerator = new NameGenerator(database);
             var kingdom = baseGenerator.Generate(new GenerationContext
             {
                 Type = NameType.Place,
-                Seed = i * 100,
                 Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 3 }
             });
 
@@ -248,11 +245,10 @@ public class DerivationDemo
                 BaseName = kingdom.Name
             });
 
-            // 5. 王名を生成（別の人物名シード）
+            // 5. 王名を生成（ランダム）
             var king = baseGenerator.Generate(new GenerationContext
             {
                 Type = NameType.Person,
-                Seed = i * 100 + 50,
                 Constraints = new StructuralConstraints { MinSyllables = 2, MaxSyllables = 2 }
             });
 

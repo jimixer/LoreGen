@@ -35,7 +35,7 @@ public class NameGenerator
             return _derivationEngine.Derive(context.BaseName, context);
         }
 
-        var random = new RandomProvider(context.Seed ?? Environment.TickCount);
+        var random = new RandomProvider(context.Seed ?? Guid.NewGuid().GetHashCode());
         var constraints = context.Constraints ?? new StructuralConstraints();
 
         // 音節数の決定
