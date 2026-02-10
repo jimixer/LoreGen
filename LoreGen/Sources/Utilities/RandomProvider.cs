@@ -102,6 +102,18 @@ public class RandomProvider
     }
 
     /// <summary>
+    /// 重み関数を使ってリストからランダムに要素を選択する。
+    /// </summary>
+    public T ChooseWeighted<T>(IList<T> items, Func<T, float> weightSelector)
+    {
+        if (items.Count == 0)
+            throw new ArgumentException("リストが空です", nameof(items));
+
+        var weights = items.Select(weightSelector).ToArray();
+        return ChooseWeighted(items, weights);
+    }
+
+    /// <summary>
     /// 指定された確率でtrueを返す。
     /// </summary>
     /// <param name="probability">確率（0.0 ~ 1.0）</param>
