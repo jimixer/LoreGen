@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="LoreGen.Tests/LoreGen.Tests.csproj" />
+  <Project Path="LoreGen/LoreGen.csproj" />
+</Solution>
