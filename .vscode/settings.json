@@ -18,5 +18,8 @@
     "**/bin/**": true,
     "**/obj/**": true,
     "**/.vs/**": true
-  }
+  },
+  "chat.instructionsFilesLocations": [
+    "../rotkCore/docs/AGENT_GUIDELINES.md"
+  ]
 }
